@@ -11,7 +11,7 @@ Sou Engenheiro de Controle e Automação, com experiência em validação de dad
 | Módulo | Conteúdo | Status |
 |--------|----------|--------|
 | [01 — Containerização](./module-01-containerization) | Docker, Python, ingestão de dados | ✅ Concluído |
-| [02 — Orquestração de Workflows](./module-02-workflow-orchestration) | Kestra, pipelines ETL, agendamento | ✅ Concluído |
+| 02 — Orquestração de Workflows | Kestra, pipelines ETL, agendamento | ✅ Concluído |
 | [03 — Data Warehouse](./module-03-data-warehouse) | BigQuery, particionamento, clustering | ✅ Concluído |
 | 04 — Analytics Engineering | dbt, modelagem dimensional | 🔄 Em andamento |
 | 05 — Batch Processing | Apache Spark, PySpark | 🔲 Pendente |
