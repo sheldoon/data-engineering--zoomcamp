@@ -1,0 +1,144 @@
+services:
+  pgdatabase:
+    image: postgres:18
+    container_name: pgdatabase
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: ny_taxi
+    volumes:
+      - ny_taxi_postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    networks:
+      - pg-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d ny_taxi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "8085:80"
+    networks:
+      - pg-network
+    depends_on:
+      pgdatabase:
+        condition: service_healthy
+
+  ingest:
+    image: taxi_ingest:v001
+    networks:
+      - pg-network
+    depends_on:
+      pgdatabase:
+        condition: service_healthy
+    command:
+      - --pg_user=root
+      - --pg_password=root
+      - --pg_host=pgdatabase
+      - --pg_port=5432
+      - --pg_database=ny_taxi
+      - --table_name=yellow_taxi_trips_2021_1
+
+  kestra-postgres:
+    image: postgres:16
+    container_name: kestra-postgres
+    environment:
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: kestra
+      POSTGRES_DB: kestra
+    volumes:
+      - kestra_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kestra"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pg-network
+
+  kestra-init:
+    image: busybox
+    container_name: kestra-init
+    command: >
+      sh -c "
+        mkdir -p /tmp/kestra-wd &&
+        chmod 777 /tmp/kestra-wd &&
+        chmod 666 /var/run/docker.sock &&
+        mkdir -p /app/storage &&
+        chmod -R 777 /app/storage
+      "
+    volumes:
+      - /tmp/kestra-wd:/tmp/kestra-wd
+      - /var/run/docker.sock:/var/run/docker.sock
+      - kestra_data:/app/storage
+
+  kestra:
+    image: kestra/kestra:v1.1
+    container_name: kestra
+    pull_policy: always
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - /app/kestra server standalone --worker-thread=128
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://kestra-postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: kestra
+        kestra:
+          server:
+            basicAuth:
+              enabled: false
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              basePath: /app/storage
+          queue:
+            type: postgres
+          tasks:
+            tmpDir:
+              path: /tmp/kestra-wd
+          ai:
+            type: gemini
+            gemini:
+              model-name: gemini-2.5-flash
+              api-key: AIzaSyB1-CWDNQP5ZfjqtD4AMOuqGuaV1eOLjPk
+    volumes:
+      - kestra_data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      kestra-postgres:
+        condition: service_healthy
+      kestra-init:
+        condition: service_completed_successfully
+    networks:
+      - pg-network
+
+volumes:
+  ny_taxi_postgres_data:
+  pgadmin_data:
+  kestra_postgres_data:
+  kestra_data:
+
+networks:
+  pg-network:
+    driver: bridge

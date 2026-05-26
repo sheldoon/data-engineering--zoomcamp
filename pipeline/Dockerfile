@@ -11,6 +11,6 @@ RUN uv sync --locked
 
 
 
-COPY pipeline.py pipeline.py
+COPY ingest_zone.py .
 
-ENTRYPOINT [ "uv", "run", "python", "pipeline.py" ]
+ENTRYPOINT [ "uv", "run", "python", "ingest_zone.py" ]
