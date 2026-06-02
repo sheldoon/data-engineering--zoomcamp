@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw_data
+    description: "raw data sources for nyc taxi rides"
+    database: "kestra2-495702"
+    schema: nytaxi
+    tables:
+      - name: green_tripdata
+      - name: yellow_tripdata
